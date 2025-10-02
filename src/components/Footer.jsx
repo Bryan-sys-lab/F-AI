@@ -13,9 +13,12 @@ import {
   Folder,
   Monitor
 } from 'lucide-react';
+import { useAgent } from '../providers/AgentContext';
 
 export default function Footer() {
+  const { getAgentHealth } = useAgent();
   const currentYear = new Date().getFullYear();
+  const health = getAgentHealth();
 
   return (
     <footer className="bg-gray-900 dark:bg-gray-950 text-white border-t border-gray-800">
@@ -134,7 +137,7 @@ export default function Footer() {
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>11 Agents Active</span>
+              <span>{health.total} Agents Active</span>
             </div>
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>

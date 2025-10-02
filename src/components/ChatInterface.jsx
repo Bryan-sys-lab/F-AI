@@ -23,12 +23,12 @@ import {
   Upload,
   Globe,
   Hash,
-  ChevronDown,
-  ChevronUp,
   MessageSquare,
   Play,
   Monitor,
-  Upload as DeployIcon
+  Upload as DeployIcon,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -45,8 +45,9 @@ import {
   TextSummary
 } from "./ai-outputs";
 import { dataProcessor } from "../utils/dataProcessor";
+import Terminal from "./Terminal";
 
-export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
+export default function ChatInterface({ onToggleWorkspace, workspaceVisible, onExecuteCommand }) {
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -61,7 +62,7 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
   const [notifications, setNotifications] = useState([]);
   const [isClassifying, setIsClassifying] = useState(false);
   const [lastClassification, setLastClassification] = useState(null);
-  const [compressedMessages, setCompressedMessages] = useState(new Set());
+  // Removed compressedMessages state
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
@@ -79,6 +80,8 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
   const [newRepository, setNewRepository] = useState("");
   const [branch, setBranch] = useState("main");
   const [additionalContext, setAdditionalContext] = useState("");
+  const [selectedAgent, setSelectedAgent] = useState("auto");
+  const [showTerminal, setShowTerminal] = useState(false);
 
   const { startTaskPolling, taskStatus, progress } = useTask();
   const { output, addOutput, clearOutput } = useOutput();
@@ -104,7 +107,8 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
     try {
       // Prepare task data with context
       const taskData = {
-        description: message.trim()
+        description: message.trim(),
+        selectedAgent: selectedAgent !== "auto" ? selectedAgent : undefined
       };
 
       // Add context if available
@@ -222,26 +226,8 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
     }
   };
 
-  // Toggle message compression
-  const toggleMessageCompression = (messageIndex) => {
-    setCompressedMessages(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(messageIndex)) {
-        newSet.delete(messageIndex);
-      } else {
-        newSet.add(messageIndex);
-      }
-      return newSet;
-    });
-  };
+  // Removed toggleMessageCompression function
 
-  // Check if message should be compressed
-  const shouldCompressMessage = (content) => {
-    if (typeof content === 'string') {
-      return content.length > 500 || content.split('\n').length > 10;
-    }
-    return false;
-  };
 
   // Notification system
   const addNotification = (message, type = 'success') => {
@@ -488,113 +474,80 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
     const isError = processedMsg.type === 'error';
     const isComment = processedMsg.type === 'comment';
 
-    // Check if message should be compressed
-    const shouldCompress = shouldCompressMessage(
-      processedMsg.aiOutput && processedMsg.aiOutput.explanatory_summary
-        ? processedMsg.aiOutput.explanatory_summary
-        : (typeof processedMsg.content === 'string' ? processedMsg.content : JSON.stringify(processedMsg.content, null, 2))
-    );
-    const isCompressed = compressedMessages.has(index) || shouldCompress;
-
     return (
-      <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6 px-4 animate-in slide-in-from-bottom-2 duration-300`}>
-        <div className={`flex w-full max-w-[95%] sm:max-w-[98%] md:max-w-[85%] lg:max-w-[75%] xl:max-w-[65%] 2xl:max-w-[55%] ${isUser ? 'flex-row-reverse' : 'flex-row'} group`}>
+      <div key={index} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 sm:mb-6 px-2 sm:px-4 animate-in slide-in-from-bottom-2 duration-300`}>
+        <div className={`flex w-full max-w-[95%] sm:max-w-[90%] md:max-w-[80%] lg:max-w-[70%] xl:max-w-[60%] 2xl:max-w-[50%] ${isUser ? 'flex-row-reverse' : 'flex-row'} group`}>
           {/* Avatar */}
-          <div className={`flex-shrink-0 ${isUser ? 'ml-3' : 'mr-3'} transition-transform duration-200 group-hover:scale-110`}>
+          <div className={`flex-shrink-0 ${isUser ? 'ml-3' : 'mr-3'}`}>
             {isUser ? (
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-blue-500/20">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
               </div>
             ) : (
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-emerald-500/20">
+              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
               </div>
             )}
           </div>
 
           {/* Message content */}
-          <div className={`relative rounded-xl px-4 py-3 max-w-full break-words overflow-hidden shadow-lg transition-all duration-200 hover:shadow-xl ${
+          <div className={`relative rounded-lg px-4 py-3 w-full max-w-[85%] sm:max-w-[75%] break-words overflow-hidden ${
             isUser
-              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+              ? 'bg-blue-600 text-white'
               : isError
-                ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700/50'
-                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700/50'
-          }`} style={{
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-            hyphens: 'auto'
-          }}>
+                ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+          }`}>
             {/* Message tail */}
-            <div className={`absolute top-4 w-3 h-3 transform rotate-45 ${
+            <div className={`absolute top-4 w-2 h-2 transform rotate-45 ${
               isUser
-                ? '-right-1.5 bg-gradient-to-r from-blue-500 to-indigo-600'
+                ? '-right-1 bg-blue-600'
                 : isError
-                  ? '-left-1.5 bg-red-50 dark:bg-red-900/20 border-l border-t border-red-200 dark:border-red-700/50'
-                  : '-left-1.5 bg-white dark:bg-gray-800 border-l border-t border-gray-200 dark:border-gray-700/50'
+                  ? '-left-1 bg-red-50 dark:bg-red-900/20 border-l border-t border-red-200 dark:border-red-800'
+                  : '-left-1 bg-gray-100 dark:bg-gray-800 border-l border-t border-gray-200 dark:border-gray-700'
             }`} />
             {isAI && processedMsg.aiOutput ? (
               <div className="space-y-4">
-                {/* Compress button for long messages - always visible when needed */}
-                {shouldCompress && (
-                  <div className="fixed top-4 right-4 z-[10000] pointer-events-auto">
-                    <button
-                      onClick={() => toggleMessageCompression(index)}
-                      className="flex items-center space-x-2 px-4 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg border border-blue-400 transition-colors shadow-lg font-semibold"
-                      title={isCompressed ? "Expand message" : "Compress message"}
-                    >
-                      {isCompressed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                      <span>{isCompressed ? "Expand" : "Compress"}</span>
-                    </button>
-                  </div>
-                )}
 
                 {/* Clean AI response display */}
                 {processedMsg.aiOutput.explanatory_summary && (
-                  <div className={`prose prose-sm max-w-none dark:prose-invert ${isCompressed ? 'max-h-32 overflow-hidden' : ''}`}>
+                  <div className="prose prose-xs max-w-none dark:prose-invert leading-relaxed">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
                         code({ node, inline, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || '');
-                          return !inline ? (
-                            <div className="overflow-x-auto max-w-full my-4">
-                              <SyntaxHighlighter
-                                style={oneDark}
-                                language={match ? match[1] : 'text'}
-                                PreTag="div"
-                                {...props}
-                              >
-                                {String(children).replace(/\n$/, '')}
-                              </SyntaxHighlighter>
-                            </div>
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={oneDark}
+                              language={match[1]}
+                              PreTag="div"
+                              className="overflow-x-auto max-w-full my-2"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
                           ) : (
-                            <code className={`${className} bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono`} {...props}>
+                            <code className={`${className} bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono`} {...props}>
                               {children}
                             </code>
                           );
                         },
                         pre({ children, ...props }) {
+                          // Don't render pre tags for syntax highlighted code blocks
+                          return null;
+                        },
+                        p({ children, ...props }) {
                           return (
-                            <pre className="overflow-x-auto max-w-full" {...props}>
+                            <p className="mb-2 last:mb-0" {...props}>
                               {children}
-                            </pre>
+                            </p>
                           );
                         }
                       }}
                     >
                       {processedMsg.aiOutput.explanatory_summary}
                     </ReactMarkdown>
-                    {isCompressed && (
-                      <div className="mt-2 text-center">
-                        <button
-                          onClick={() => toggleMessageCompression(index)}
-                          className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-                        >
-                          Click to expand...
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -717,18 +670,18 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
   };
 
   return (
-    <div className="flex h-full w-full bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors relative flex flex-col overflow-x-hidden">
-      {/* Notifications */}
-      <div className="absolute top-4 right-4 z-50 space-y-2">
+    <div className="flex h-full w-full bg-white dark:bg-gray-900 transition-colors relative flex flex-col overflow-x-hidden">
+      {/* Clean Notifications */}
+      <div className="absolute top-4 right-4 z-50 space-y-2 max-w-sm">
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`px-4 py-3 rounded-xl shadow-lg backdrop-blur-lg border animate-in slide-in-from-right duration-300 ${
+            className={`px-4 py-3 rounded-lg shadow-md border animate-in slide-in-from-right duration-300 ${
               notification.type === 'success'
-                ? 'bg-emerald-500/90 text-white border-emerald-400/50'
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800'
                 : notification.type === 'error'
-                  ? 'bg-red-500/90 text-white border-red-400/50'
-                  : 'bg-blue-500/90 text-white border-blue-400/50'
+                  ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800'
+                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800'
             }`}
           >
             <div className="flex items-center space-x-2">
@@ -739,10 +692,10 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
           </div>
         ))}
       </div>
-      {/* Sidebar */}
+      {/* Sidebar - Mobile First */}
       <div className={`${
-        showHistory || showProjects || showContext ? 'w-80' : 'w-0'
-      } transition-all duration-300 ease-in-out overflow-hidden border-r border-gray-200/50 dark:border-gray-700/50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg`}>
+        showHistory || showProjects || showContext ? 'w-full sm:w-80' : 'w-0'
+      } transition-all duration-300 ease-in-out overflow-hidden border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800`}>
         {/* History Panel */}
         {showHistory && (
           <div className="p-4 h-full overflow-y-auto">
@@ -1076,47 +1029,43 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 w-full flex flex-col min-h-0 px-4 pb-16 lg:pb-4 overflow-y-auto mx-auto max-w-full sm:max-w-4xl md:max-w-5xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-8xl">
-        {/* Header */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 flex items-center justify-between shadow-sm">
+      <div className="flex-1 w-full flex flex-col min-h-0 px-2 sm:px-4 pb-16 lg:pb-4 overflow-y-auto mx-auto max-w-full md:max-w-5xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-8xl">
+        {/* Clean Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-white" />
             </div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Chat</h2>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             {/* Connection Status */}
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700/50">
-              <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-600 dark:text-gray-300">
                 {isConnected ? 'Online' : 'Offline'}
               </span>
             </div>
 
-            {/* Classification Status */}
+            {/* Status Indicator */}
             {isClassifying && (
-              <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200/50 dark:border-emerald-700/50">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-emerald-500 animate-pulse" />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Analyzing Request</span>
-                </div>
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-blue-700 dark:text-blue-300">Processing</span>
               </div>
             )}
 
-            {/* Task Status */}
-            {taskStatus !== 'Idle' && (
-              <div className="flex items-center space-x-3 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50">
-                <div className="flex items-center space-x-2">
-                  {taskStatus === 'Running' && <Clock className="w-4 h-4 text-blue-500 animate-spin" />}
-                  {taskStatus === 'Completed' && <CheckCircle className="w-4 h-4 text-emerald-500" />}
-                  {taskStatus === 'Failed' && <XCircle className="w-4 h-4 text-red-500" />}
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{taskStatus}</span>
-                </div>
+            {taskStatus !== 'Idle' && !isClassifying && (
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700">
+                {taskStatus === 'Running' && <Clock className="w-4 h-4 text-blue-500 animate-pulse" />}
+                {taskStatus === 'Completed' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                {taskStatus === 'Failed' && <XCircle className="w-4 h-4 text-red-500" />}
+                <span className="text-sm text-gray-700 dark:text-gray-300">{taskStatus}</span>
                 {progress > 0 && (
-                  <div className="w-24 bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
+                  <div className="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 ml-2">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-500 ease-out"
+                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     ></div>
                   </div>
@@ -1125,64 +1074,38 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
             )}
           </div>
 
-          <div className="flex items-center space-x-1">
-            {/* Sidebar toggles */}
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
-                showHistory
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}
-              title="Task History"
-            >
-              <History className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setShowProjects(!showProjects)}
-              className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
-                showProjects
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}
-              title="Projects"
-            >
-              <FolderOpen className="w-4 h-4" />
-            </button>
+          <div className="flex items-center space-x-2">
+            {/* Essential Actions */}
             <button
               onClick={() => setShowContext(!showContext)}
-              className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
+              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
                 showContext
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
-              title="Context Settings"
+              title="Context & Settings"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-5 h-5" />
             </button>
 
-            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2" />
-
-            {/* Workspace toggle */}
             <button
               onClick={onToggleWorkspace}
-              className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105 text-gray-600 dark:text-gray-400"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-105 text-gray-600 dark:text-gray-400"
               title={workspaceVisible ? "Hide Workspace" : "Show Workspace"}
             >
-              <Monitor className="w-4 h-4" />
+              <Code className="w-5 h-5" />
             </button>
 
-            {/* Copy conversation */}
             <button
               onClick={copyConversation}
-              className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
+              className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
                 copiedConversation
-                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg'
+                  ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}
               title="Copy Conversation"
             >
-              {copiedConversation ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copiedConversation ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -1192,41 +1115,32 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
           {/* Messages Area */}
           <div
             ref={messagesContainerRef}
-            className={`${output.length === 0 ? '' : 'flex-1'} overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-hide relative`}
+            className={`${output.length === 0 ? '' : 'flex-1'} overflow-y-auto p-2 sm:p-4 space-y-4 min-h-0 scrollbar-hide relative`}
           >
             {output.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center max-w-md mx-auto px-6">
-                  <div className="relative mb-8">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
-                      <MessageSquare className="w-10 h-10 text-white" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center animate-bounce">
-                      <Zap className="w-3 h-3 text-white" />
-                    </div>
+              <div className="flex items-center justify-center h-full px-4">
+                <div className="text-center max-w-sm mx-auto">
+                  <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <MessageSquare className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-3">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                     Welcome to B2.0
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
-                    I'm here to help you with coding, debugging, testing, and more. Ask me anything!
+                  <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                    Your AI development assistant. Ready to help with coding, debugging, and more.
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <Code className="w-4 h-4 text-blue-500 mx-auto mb-2" />
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Code className="w-5 h-5 text-blue-500" />
                       <span className="text-gray-700 dark:text-gray-300">Write & fix code</span>
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <Play className="w-4 h-4 text-emerald-500 mx-auto mb-2" />
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Play className="w-5 h-5 text-green-500" />
                       <span className="text-gray-700 dark:text-gray-300">Run & test code</span>
                     </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <FileText className="w-4 h-4 text-purple-500 mx-auto mb-2" />
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <FileText className="w-5 h-5 text-purple-500" />
                       <span className="text-gray-700 dark:text-gray-300">Analyze files</span>
-                    </div>
-                    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <Monitor className="w-4 h-4 text-orange-500 mx-auto mb-2" />
-                      <span className="text-gray-700 dark:text-gray-300">Debug issues</span>
                     </div>
                   </div>
                 </div>
@@ -1272,35 +1186,89 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
             </div>
           )}
 
-          {/* Input Area */}
-          <div className={`bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg ${output.length === 0 ? '' : 'border-t'} border-gray-200/50 dark:border-gray-700/50 p-4 ${output.length === 0 ? 'max-w-full sm:max-w-4xl mx-auto w-full' : ''}`}>
-            <div className="flex items-end space-x-4 max-w-full sm:max-w-4xl mx-auto">
+          {/* Terminal Panel */}
+          {showTerminal && onExecuteCommand && (
+            <div className="bg-gray-900 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+                <div className="flex items-center space-x-2">
+                  <DeployIcon className="w-4 h-4 text-green-400" />
+                  <span className="text-sm font-medium text-white">Terminal</span>
+                </div>
+                <button
+                  onClick={() => setShowTerminal(false)}
+                  className="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="h-64">
+                <Terminal onExecuteCommand={onExecuteCommand} />
+              </div>
+            </div>
+          )}
+
+          {/* Clean Input Area */}
+          <div className={`bg-white dark:bg-gray-800 ${output.length === 0 ? '' : 'border-t'} border-gray-200 dark:border-gray-700 p-4 ${output.length === 0 ? 'max-w-full sm:max-w-2xl mx-auto w-full' : ''}`}>
+            <div className="flex items-end space-x-3 max-w-full sm:max-w-2xl mx-auto">
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask me anything... (Shift+Enter for new line)"
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-700 dark:to-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 resize-none shadow-sm hover:shadow-md focus:shadow-lg"
+                  placeholder="Ask me anything..."
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
                   rows="1"
-                  style={{ minHeight: '52px', maxHeight: '160px' }}
+                  style={{ minHeight: '44px', maxHeight: '120px' }}
                   onInput={(e) => {
                     e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                   }}
                 />
-                {/* Character counter */}
-                {message.length > 0 && (
-                  <div className="absolute bottom-2 right-3 text-xs text-gray-400">
-                    {message.length}
-                  </div>
+              </div>
+
+              {/* Agent Selection and Terminal Toggle */}
+              <div className="flex flex-col space-y-2">
+                <select
+                  value={selectedAgent}
+                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  title="Select agent (auto = automatic classification)"
+                >
+                  <option value="auto">Auto</option>
+                  <option value="fix_implementation_agent">Fix Implementation</option>
+                  <option value="debugger_agent">Debugger</option>
+                  <option value="review_agent">Review</option>
+                  <option value="testing_agent">Testing</option>
+                  <option value="security_agent">Security</option>
+                  <option value="performance_agent">Performance</option>
+                  <option value="deployment_agent">Deployment</option>
+                  <option value="monitoring_agent">Monitoring</option>
+                  <option value="feedback_agent">Feedback</option>
+                  <option value="comparator_service">Comparator Service</option>
+                  <option value="task_classifier">Task Classifier</option>
+                  <option value="web_scraper">Web Scraper</option>
+                  <option value="architecture">Architecture</option>
+                </select>
+
+                {onExecuteCommand && (
+                  <button
+                    onClick={() => setShowTerminal(!showTerminal)}
+                    className={`p-2 rounded-lg transition-all duration-200 hover:scale-105 ${
+                      showTerminal
+                        ? 'bg-green-500 text-white shadow-lg'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                    title={showTerminal ? "Hide Terminal" : "Show Terminal"}
+                  >
+                    <DeployIcon className="w-4 h-4" />
+                  </button>
                 )}
               </div>
               <button
                 onClick={sendMessage}
                 disabled={!message.trim() || isTyping}
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white p-4 rounded-xl transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl disabled:shadow-none transform hover:scale-105 disabled:transform-none"
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white p-3 rounded-lg transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg disabled:shadow-none"
                 title="Send message"
               >
                 {isTyping ? (
@@ -1310,51 +1278,6 @@ export default function ChatInterface({ onToggleWorkspace, workspaceVisible }) {
                 )}
               </button>
             </div>
-
-            {/* Context indicator */}
-            {showContext && (tags.length > 0 || repositories.length > 0 || links.length > 0 || codeSnippets.length > 0 || files.length > 0 || additionalContext.trim()) && (
-              <div className="mt-3 flex items-center justify-center space-x-4 text-sm">
-                <div className="flex items-center space-x-4 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
-                  <span className="text-gray-600 dark:text-gray-300 font-medium">Context:</span>
-                  {tags.length > 0 && (
-                    <div className="flex items-center space-x-1 text-blue-600 dark:text-blue-400">
-                      <Tag className="w-4 h-4" />
-                      <span>{tags.length} tag{tags.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {repositories.length > 0 && (
-                    <div className="flex items-center space-x-1 text-purple-600 dark:text-purple-400">
-                      <Globe className="w-4 h-4" />
-                      <span>{repositories.length} repo{repositories.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {links.length > 0 && (
-                    <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
-                      <Link className="w-4 h-4" />
-                      <span>{links.length} link{links.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {codeSnippets.length > 0 && (
-                    <div className="flex items-center space-x-1 text-orange-600 dark:text-orange-400">
-                      <Code className="w-4 h-4" />
-                      <span>{codeSnippets.length} snippet{codeSnippets.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {files.length > 0 && (
-                    <div className="flex items-center space-x-1 text-teal-600 dark:text-teal-400">
-                      <Upload className="w-4 h-4" />
-                      <span>{files.length} file{files.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {additionalContext.trim() && (
-                    <div className="flex items-center space-x-1 text-red-600 dark:text-red-400">
-                      <FileText className="w-4 h-4" />
-                      <span>Notes</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

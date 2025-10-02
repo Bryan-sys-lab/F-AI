@@ -16,10 +16,11 @@ import ProjectManagement from "./components/ProjectManagement";
 import Footer from "./components/Footer";
 import DarkModeToggle from "./components/DarkModeToggle";
 import GitHubConnection from "./components/GitHubConnection";
-import { Activity, Cpu, GitBranch, Users, Zap, Folder, Monitor, Shield, MessageSquare, Code, ExternalLink } from "lucide-react";
+import { Activity, Cpu, GitBranch, Users, Zap, Folder, Monitor, Shield, MessageSquare, Code, ExternalLink, MoreHorizontal } from "lucide-react";
 
 export default function App() {
-  const [activeView, setActiveView] = useState('chat'); // 'chat' | 'agents' | 'providers' | 'workspace' | 'orchestrator' | 'repositories' | 'observability' | 'security' | 'prompts' | 'intelligence' | 'integrations' | 'projects'
+  const [activeView, setActiveView] = useState('chat');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Navigation items configuration
   const navItems = [
@@ -37,67 +38,121 @@ export default function App() {
     { id: 'integrations', label: 'Integrations', icon: ExternalLink },
   ];
 
-  return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 transition-colors relative flex flex-col overflow-x-hidden">
+  // Main navigation items (always visible)
+  const mainNavItems = navItems.slice(0, 4);
+  // Additional items for "More" menu
+  const moreNavItems = navItems.slice(4);
 
-      {/* Mobile-First Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
+  return (
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-gray-900 transition-colors relative flex flex-col overflow-x-hidden">
+
+      {/* Clean Header */}
+      <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="px-4 py-4 sm:py-3">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
             {/* Logo/Brand */}
-            <div className="flex-1 flex justify-center">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">B2</span>
-                </div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-lg">B2</span>
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                   B2.0
                 </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">AI Development Platform</p>
               </div>
             </div>
 
-
             {/* Right side controls */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <GitHubConnection compact={true} />
               <DarkModeToggle />
             </div>
           </div>
         </div>
-
       </header>
 
-      {/* Bottom Navigation - All screen sizes */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700">
-        <nav className="flex items-center justify-around px-2 py-2 max-w-4xl mx-auto overflow-x-auto scrollbar-hide">
-          {navItems.map((item) => {
+      {/* Bottom Navigation - Mobile First */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
+        <nav className="flex items-center justify-around px-1 py-3 max-w-sm mx-auto relative">
+          {/* Main navigation items */}
+          {mainNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`p-2 rounded-lg transition-all duration-200 flex flex-col items-center space-y-1 ${
+                className={`p-2 rounded-lg transition-all duration-200 flex flex-col items-center space-y-1 min-w-0 flex-1 ${
                   activeView === item.id
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-600 dark:text-gray-400'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
                 title={item.label}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs hidden sm:block">{item.label}</span>
+                <span className="text-xs font-medium truncate">{item.label}</span>
               </button>
             );
           })}
+
+          {/* More menu button */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              className={`p-2 rounded-lg transition-all duration-200 flex flex-col items-center space-y-1 min-w-0 flex-1 ${
+                showMoreMenu
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+              title="More options"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+              <span className="text-xs font-medium">More</span>
+            </button>
+
+            {/* More menu dropdown */}
+            {showMoreMenu && (
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-48">
+                {moreNavItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveView(item.id);
+                        setShowMoreMenu(false);
+                      }}
+                      className={`w-full px-4 py-3 flex items-center space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                        activeView === item.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
+
+        {/* Overlay to close more menu */}
+        {showMoreMenu && (
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setShowMoreMenu(false)}
+          />
+        )}
       </div>
 
-      {/* Main layout */}
-      <div className="flex-1 w-full flex flex-col min-h-0 px-4 pb-16 lg:pb-4 overflow-y-auto">
-        {activeView === 'chat' && (
-          <div className="flex-1 overflow-hidden min-h-0">
-            <IntegratedWorkspace />
-          </div>
-        )}
+      {/* Main Content */}
+      <main className="flex-1 w-full pb-20 pt-4 px-4 sm:px-6 lg:px-8 overflow-y-auto">
+        <div className="max-w-7xl mx-auto h-full">
+          {activeView === 'chat' && (
+            <div className="h-full">
+              <IntegratedWorkspace />
+            </div>
+          )}
 
 
         {activeView === 'agents' && (
@@ -161,13 +216,13 @@ export default function App() {
           </div>
         )}
 
-        {activeView === 'integrations' && (
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <IntegrationEcosystemConnectors />
-          </div>
-        )}
-      </div>
-
+          {activeView === 'integrations' && (
+            <div className="h-full overflow-y-auto">
+              <IntegrationEcosystemConnectors />
+            </div>
+          )}
+        </div>
+      </main>
 
       {/* Footer */}
       <Footer />

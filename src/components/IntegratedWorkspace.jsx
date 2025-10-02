@@ -12,8 +12,6 @@ export default function IntegratedWorkspace() {
   const [openFiles, setOpenFiles] = useState([]); // array of open files
   const [activeFileIndex, setActiveFileIndex] = useState(-1); // index of active file tab
   const [isResizing, setIsResizing] = useState(false);
-  const [terminalHeight, setTerminalHeight] = useState(30); // percentage of workspace height
-  const [terminalVisible, setTerminalVisible] = useState(true); // terminal visibility
   const [isTerminalResizing, setIsTerminalResizing] = useState(false);
   const [showDeployModal, setShowDeployModal] = useState(false);
   const containerRef = useRef(null);
@@ -31,13 +29,6 @@ export default function IntegratedWorkspace() {
     setPanelWidth(Math.max(30, Math.min(70, newWidth)));
   };
 
-  const handleTerminalMouseMove = (e) => {
-    if (!isTerminalResizing || !workspaceRef.current) return;
-
-    const workspaceRect = workspaceRef.current.getBoundingClientRect();
-    const newHeight = ((workspaceRect.bottom - e.clientY) / workspaceRect.height) * 100;
-    setTerminalHeight(Math.max(20, Math.min(80, newHeight)));
-  };
 
   const handleMouseUp = () => {
     setIsResizing(false);
@@ -120,22 +111,6 @@ export default function IntegratedWorkspace() {
     setIsTerminalResizing(true);
   };
 
-  useEffect(() => {
-    if (isTerminalResizing) {
-      document.addEventListener('mousemove', handleTerminalMouseMove);
-      document.addEventListener('mouseup', () => setIsTerminalResizing(false));
-      document.body.style.cursor = 'row-resize';
-      document.body.style.userSelect = 'none';
-    } else {
-      document.removeEventListener('mousemove', handleTerminalMouseMove);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleTerminalMouseMove);
-    };
-  }, [isTerminalResizing]);
 
   const executeCommand = async (command) => {
     try {
@@ -215,7 +190,7 @@ export default function IntegratedWorkspace() {
           maxWidth: workspaceVisible ? '70%' : '100%'
         }}
       >
-        <ChatInterface onToggleWorkspace={toggleWorkspace} workspaceVisible={workspaceVisible} />
+        <ChatInterface onToggleWorkspace={toggleWorkspace} workspaceVisible={workspaceVisible} onExecuteCommand={executeCommand} />
       </div>
 
       {/* GitHub Deploy Modal */}
@@ -276,15 +251,6 @@ export default function IntegratedWorkspace() {
 
           {/* Toolbar */}
           <div className="flex items-center space-x-1 px-2">
-            <button
-              onClick={() => setTerminalVisible(!terminalVisible)}
-              className={`p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                terminalVisible ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : ''
-              }`}
-              title={terminalVisible ? "Hide Terminal" : "Show Terminal"}
-            >
-              <TerminalIcon className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -324,25 +290,6 @@ export default function IntegratedWorkspace() {
             </div>
           </div>
 
-          {/* Terminal Resizer */}
-          {terminalVisible && (
-            <div
-              className="h-1 bg-gray-200 dark:bg-gray-700 cursor-row-resize hover:bg-blue-400 dark:hover:bg-blue-500 transition-colors relative group"
-              onMouseDown={handleTerminalMouseDown}
-            >
-              <div className="absolute inset-x-0 -top-1 -bottom-1 group-hover:bg-blue-400 dark:group-hover:bg-blue-500 opacity-0 group-hover:opacity-20 transition-opacity" />
-            </div>
-          )}
-
-          {/* Terminal */}
-          {terminalVisible && (
-            <div
-              className="bg-gray-900"
-              style={{ height: `${terminalHeight}%` }}
-            >
-              <Terminal onExecuteCommand={executeCommand} />
-            </div>
-          )}
         </div>
       </div>
       )}

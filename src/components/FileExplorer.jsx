@@ -14,12 +14,13 @@ export default function FileExplorer({ onFileSelect }) {
     try {
       // Try to load from backend API first
       const response = await fetch('/api/workspace/files');
+      let workspaceFiles = [];
       if (response.ok) {
         const data = await response.json();
-        setFiles(data.files || []);
+        workspaceFiles = data.files || [];
       } else {
         // Fallback to mock data
-        const mockFiles = [
+        workspaceFiles = [
           {
             name: 'src',
             type: 'directory',
@@ -38,8 +39,38 @@ export default function FileExplorer({ onFileSelect }) {
           { name: 'package.json', type: 'file', path: '/package.json' },
           { name: 'README.md', type: 'file', path: '/README.md' }
         ];
-        setFiles(mockFiles);
       }
+
+      // Try to load generated files
+      let generatedFiles = [];
+      try {
+        const generatedResponse = await fetch('/api/workspace/generated-files');
+        if (generatedResponse.ok) {
+          const generatedData = await generatedResponse.json();
+          generatedFiles = generatedData.files || [];
+        }
+      } catch (error) {
+        console.log('No generated files available:', error);
+      }
+
+      // Combine workspace files and generated files
+      let combinedFiles = [...workspaceFiles];
+
+      if (generatedFiles.length > 0) {
+        // Add generated files as a special directory
+        const generatedDir = {
+          name: 'generated',
+          type: 'directory',
+          path: '/generated',
+          children: generatedFiles.map(file => ({
+            ...file,
+            path: `/generated/${file.name}`
+          }))
+        };
+        combinedFiles.push(generatedDir);
+      }
+
+      setFiles(combinedFiles);
     } catch (error) {
       console.error('Failed to load files:', error);
       // Fallback to mock data

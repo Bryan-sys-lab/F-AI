@@ -38,7 +38,9 @@ export default function AgentStatusDashboard() {
       performance_agent: 'bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-200',
       comparator_service: 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200',
       feedback_agent: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
-      task_classifier: 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200'
+      task_classifier: 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200',
+      web_scraper: 'bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200',
+      architecture: 'bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200'
     };
     return colors[agentType] || 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200';
   };

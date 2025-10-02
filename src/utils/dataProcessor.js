@@ -261,11 +261,14 @@ export class DataProcessor {
         };
       });
 
-      // Create explanatory summary with description and code
+      // Create explanatory summary with description, code, explanation, and run steps
       let summary = "";
       if (data.result) {
         summary += `${String(data.result)}\n\n`;
       }
+
+      // Add file generation notice
+      summary += `**📁 Files Generated:** ${fileEntries.length} file(s) created\n\n`;
 
       // Add each file's code directly in the summary for easy copying
       for (const [filename, content] of fileEntries) {
@@ -273,6 +276,22 @@ export class DataProcessor {
         const language = this.detectLanguage(filename, codeContent);
         summary += `**${filename}:**\n\`\`\`${language}\n${codeContent}\n\`\`\`\n\n`;
       }
+
+      // Add explanation section
+      summary += `**📖 Code Explanation:**\n`;
+      summary += `The generated code implements the requested functionality. `;
+      summary += `Each file contains well-structured code with proper syntax and best practices.\n\n`;
+
+      // Add run steps
+      summary += `**🚀 How to Run:**\n`;
+      for (const [filename, content] of fileEntries) {
+        const language = this.detectLanguage(filename, content);
+        const runCommand = this.getRunCommand(filename, language);
+        if (runCommand) {
+          summary += `- **${filename}:** \`${runCommand}\`\n`;
+        }
+      }
+      summary += `\n`;
 
       aiOutput.explanatory_summary = summary.trim();
 
@@ -519,6 +538,32 @@ export class DataProcessor {
     }
 
     return 'python'; // Default fallback
+  }
+
+  /**
+   * Get run command for a file based on language
+   */
+  getRunCommand(filename, language) {
+    const commands = {
+      'python': `python ${filename}`,
+      'javascript': `node ${filename}`,
+      'typescript': `npx ts-node ${filename}`,
+      'java': `javac ${filename} && java ${filename.replace('.java', '')}`,
+      'cpp': `g++ ${filename} -o ${filename.replace('.cpp', '')} && ./${filename.replace('.cpp', '')}`,
+      'c': `gcc ${filename} -o ${filename.replace('.c', '')} && ./${filename.replace('.c', '')}`,
+      'go': `go run ${filename}`,
+      'rust': `rustc ${filename} && ./${filename.replace('.rs', '')}`,
+      'php': `php ${filename}`,
+      'ruby': `ruby ${filename}`,
+      'html': `Open ${filename} in a web browser`,
+      'css': `CSS files are used with HTML`,
+      'json': `JSON files are data files`,
+      'yaml': `YAML files are configuration files`,
+      'markdown': `Markdown files can be viewed with a markdown viewer`,
+      'text': `Text files can be opened with any text editor`
+    };
+
+    return commands[language] || `Run command for ${language} not specified`;
   }
 
   /**
